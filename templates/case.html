@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ case.title }}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container my-5">
+    <div class="card">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <!-- Left: 제목 -->
+            <h1>{{ case.title }}</h1>
+            <!-- Right: 버튼 그룹 -->
+            <div>
+                <!-- 목록 버튼 -->
+                <button class="btn btn-light me-2" onclick="history.back()">목록</button>
+                <!-- 수정 버튼 -->
+                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#editModal">
+                    수정
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <p class="lead">{{ case.description }}</p>
+            <h3>Precondition:</h3>
+            <pre class="bg-light p-3">{{ case.precondition }}</pre>
+            <h3>Steps:</h3>
+            <pre class="bg-light p-3">{{ case.steps }}</pre>
+            <h3>Expected Result:</h3>
+            <pre class="bg-light p-3">{{ case.expected_result }}</pre>
+
+            <!-- Form Section -->
+            <form method="POST" action="/execute_case/{{ case.id }}">
+                <div class="mb-3">
+                    <label for="result" class="form-label">Choose Result:</label>
+                    <select name="result" id="result" class="form-select">
+                        <option value="PASS">PASS</option>
+                        <option value="FAIL">FAIL</option>
+                        <option value="NOT_RUN">NOT_RUN</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-success">Record Result</button>
+            </form>
+        </div>
+
+        <!-- Execution History -->
+        <div class="card mt-4">
+            <div class="card-header bg-secondary text-white">
+                <h3>Execution History</h3>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% if case.executions %}
+                {% for exec in case.executions %}
+                <li class="list-group-item">
+                    <span class="fw-bold">{{ exec.executed_at }}</span> - {{ exec.result }}
+                </li>
+                {% endfor %}
+                {% else %}
+                <li class="list-group-item">No executions recorded yet.</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- 수정 모달 -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">Edit Test Case</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="/update_case_details/{{ case.id }}">
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Title:</label>
+                        <input type="text" name="title" id="title" class="form-control" value="{{ case.title }}"
+                               required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="precondition" class="form-label">Precondition:</label>
+                        <textarea name="precondition" id="precondition" rows="3" class="form-control">{{ case.precondition }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="steps" class="form-label">Steps:</label>
+                        <textarea name="steps" id="steps" rows="5" class="form-control">{{ case.steps }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="expected_result" class="form-label">Expected Result:</label>
+                        <textarea name="expected_result" id="expected_result" rows="3" class="form-control">{{ case.expected_result }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Update</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

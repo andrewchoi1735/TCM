@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>테스트 케이스 툴</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+        }
+
+        .lnb {
+            width: 200px;
+            background-color: #f0f0f0;
+            padding: 20px;
+            height: 100vh;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .lnb ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .lnb li {
+            margin: 10px 0;
+        }
+
+        .dashboard {
+            flex: 1;
+            padding: 20px;
+        }
+
+        .dashboard h3 {
+            margin-top: 20px;
+        }
+
+        .card {
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+            background-color: #fff;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+<div class="lnb">
+    <h2>메뉴 구성</h2>
+    <ul>
+        <li>테스트 케이스 작성</li>
+        <li>테스트 실행</li>
+        <li>결과 분석</li>
+        <li>테스트 환경 설정</li>
+        <li>사용자 관리</li>
+        <li>통계 및 리포트</li>
+    </ul>
+</div>
+<div class="dashboard">
+    <h2>대시보드</h2>
+    <div class="card">
+        <h3>테스트 실행 상태</h3>
+        <p>현재 실행 중인 테스트: 3개</p>
+    </div>
+    <div class="card">
+        <h3>결과 요약</h3>
+        <p>성공: 5개, 실패: 2개</p>
+    </div>
+    <div class="card">
+        <h3>에러 및 이슈 트래킹</h3>
+        <p>에러 발생: 1개, 해결: 0개</p>
+    </div>
+    <div class="card">
+        <h3>실행 로그</h3>
+        <p>테스트 실행 로그 확인 가능</p>
+    </div>
+    <div class="card">
+        <h3>테스트 커버리지</h3>
+        <p>커버리지: 75%</p>
+    </div>
+    <div class="card">
+        <h3>프로젝트 현황</h3>
+        <p>진행 중 프로젝트: 2개</p>
+    </div>
+</div>
+</body>
+</html>

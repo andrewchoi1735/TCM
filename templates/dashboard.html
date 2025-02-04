@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid px-4 py-5">
+
+    <!-- 헤더 섹션 -->
+    <div class="row mb-5">
+        <div class="col-12 text-center">
+            <h1 class="display-5 fw-bold text-gradient-primary">Test Management Dashboard</h1>
+            <p class="lead text-muted">Manage your test projects and cases efficiently</p>
+        </div>
+    </div>
+
+    <!-- 메인 카드 그리드 -->
+    <div class="row g-4">
+
+        <!-- 프로젝트 목록 카드 -->
+        <div class="col-12 col-xl-4">
+            <div class="card border-0 shadow-lg hover-transform">
+                <div class="card-header bg-primary text-white py-3">
+                    <h2 class="h5 mb-0">
+                        <i class="fas fa-folder-open me-2"></i>
+                        Projects
+                        <span class="badge bg-white text-primary float-end">{{ suites|length }}</span>
+                    </h2>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for suite in suites %}
+                        <a href="{{ url_for('view_suite', suite_id=suite.id) }}"
+                           class="list-group-item list-group-item-action d-flex align-items-center py-3">
+                            <i class="fas fa-project-diagram text-primary me-3"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 fw-semibold">{{ suite.name }}</h6>
+                                <small class="text-muted">{{ suite.test_cases|length }} test cases</small>
+                            </div>
+                            <i class="fas fa-chevron-right text-muted"></i>
+                        </a>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                            <p class="text-muted mb-0">No projects found</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 테스트 케이스 목록 카드 -->
+        <div class="col-12 col-xl-4">
+            <div class="card border-0 shadow-lg hover-transform">
+                <div class="card-header bg-success text-white py-3">
+                    <h2 class="h5 mb-0">
+                        <i class="fas fa-tasks me-2"></i>
+                        Recent Test Cases
+                        <span class="badge bg-white text-success float-end">{{ cases|length }}</span>
+                    </h2>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% for case in cases %}
+                        <a href="{{ url_for('view_case', case_id=case.id) }}"
+                           class="list-group-item list-group-item-action d-flex align-items-center py-3">
+                            <div class="status-indicator bg-{{ 'success' if case.executions|selectattr('result', 'equalto', 'PASS')|list else 'danger' }} me-3"></div>
+                            <div class="flex-grow-1">
+                                <h6 class="mb-1 fw-semibold">{{ case.title }}</h6>
+                                <div class="d-flex align-items-center">
+                                    <small class="text-muted me-2">
+                                        <i class="fas fa-clock me-1"></i>
+                                        {{ case.executions[-1].executed_at|time_ago if case.executions else 'Never run'
+                                        }}
+                                    </small>
+                                    <span class="badge bg-{{ 'success' if case.executions|selectattr('result', 'equalto', 'PASS')|list else 'secondary' }}">
+                                        {{ case.executions[-1].result if case.executions else 'N/A' }}
+                                    </span>
+                                </div>
+                            </div>
+                            <i class="fas fa-chevron-right text-muted"></i>
+                        </a>
+                        {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-inbox fa-2x text-muted mb-3"></i>
+                            <p class="text-muted mb-0">No test cases found</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 리포트 & 통계 섹션 -->
+        <div class="col-12 col-xl-4">
+            <div class="card border-0 shadow-lg hover-transform h-100">
+                <div class="card-header bg-info text-white py-3">
+                    <h2 class="h5 mb-0">
+                        <i class="fas fa-chart-pie me-2"></i>
+                        Analytics
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <!-- 통계 카드 -->
+                        <div class="col-6">
+                            <div class="metric-card bg-primary-light">
+                                <i class="metric-icon fas fa-check-circle text-primary"></i>
+                                <div class="metric-value">{{ pass_count }}</div>
+                                <div class="metric-label">Passed</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-card bg-danger-light">
+                                <i class="metric-icon fas fa-times-circle text-danger"></i>
+                                <div class="metric-value">{{ fail_count }}</div>
+                                <div class="metric-label">Failed</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-card bg-warning-light">
+                                <i class="metric-icon fas fa-pause-circle text-warning"></i>
+                                <div class="metric-value">{{ notrun_count }}</div>
+                                <div class="metric-label">Not_Run</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="metric-card bg-secondary-light">
+                                <i class="metric-icon fas fa-boxes text-secondary"></i>
+                                <div class="metric-value">{{ total_cases }}</div>
+                                <div class="metric-label">Total</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    :root {
+        --primary-color: #4e73df;
+        --secondary-color: #858796;
+        --success-color: #1cc88a;
+        --info-color: #36b9cc;
+        --warning-color: #f6c23e;
+        --danger-color: #e74a3b;
+    }
+
+    /* 카드 애니메이션 */
+    .hover-transform {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border-radius: 0.75rem;
+    }
+
+    .hover-transform:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1);
+    }
+
+    /* 메트릭 카드 */
+    .metric-card {
+        padding: 1.5rem;
+        border-radius: 0.5rem;
+        text-align: center;
+        background: rgba(78, 115, 223, 0.1);
+    }
+
+    .metric-icon {
+        font-size: 1.75rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--primary-color);
+    }
+
+    .metric-label {
+        font-size: 0.85rem;
+        color: var(--secondary-color);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* 상태 표시기 */
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+    }
+
+    /* 텍스트 그라데이션 */
+    .text-gradient-primary {
+        background: linear-gradient(45deg, var(--primary-color), #224abe);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+
+    /* 배경 색상 변형 */
+    .bg-primary-light {
+        background: rgba(78, 115, 223, 0.1);
+    }
+
+    .bg-success-light {
+        background: rgba(28, 200, 138, 0.1);
+    }
+
+    .bg-danger-light {
+        background: rgba(231, 74, 59, 0.1);
+    }
+
+    .bg-warning-light {
+        background: rgba(246, 194, 62, 0.1);
+    }
+
+    .bg-secondary-light {
+        background: rgba(133, 135, 150, 0.1);
+    }
+</style>
+{% endblock %}

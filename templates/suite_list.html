@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h2>Projects List</h2>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addSuiteModal">+ Add New Project</button>
+    </div>
+    <div class="card-body">
+        {% if suites %}
+        <ul class="list-group">
+            {% for suite in suites %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">{{ suite.name }}</h4>
+                    <small class="text-muted">Abbreviation: {{ suite.abbreviation }}</small> <br>
+                    <small>Total Test Cases: {{ suite.test_cases|length }}</small>
+                </div>
+                <a href="/suite/{{ suite.id }}" class="btn btn-primary">View Project</a>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-muted">No suites available. Please create one!</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Suite Modal -->
+<div class="modal fade" id="addSuiteModal" tabindex="-1" aria-labelledby="addSuiteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="POST" action="/create_suite">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addSuiteModalLabel">Create New Project</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Project Name</label>
+                        <input type="text" id="name" name="name" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="abbreviation" class="form-label">Abbreviation (약칭)</label>
+                        <input type="text" id="abbreviation" name="abbreviation" class="form-control" maxlength="10" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Create Project</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

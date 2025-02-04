@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Management</title>
+</head>
+<body>
+<h1>Test Suites</h1>
+<form method="POST" action="/add_suite">
+    <input type="text" name="name" placeholder="New Test Suite" required>
+    <button type="submit">Add Suite</button>
+</form>
+<ul>
+    {% for suite in suites %}
+    <li><a href="/suite/{{ suite.id }}">{{ suite.name }}</a></li>
+    {% endfor %}
+</ul>
+</body>
+</html>

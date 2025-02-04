@@ -1,0 +1,3 @@
+.custom-nav-right {
+    margin-left: auto; /* Flexbox 부모에서 자동으로 왼쪽 여백을 채워 우측으로 밀어냄 */
+}

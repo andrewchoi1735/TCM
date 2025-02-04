@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h2>{{ suite.name }}</h2>
+        <p class="mb-0">Total Test Cases: <span class="fw-bold">{{ suite.test_cases|length }}</span></p>
+    </div>
+    <div class="card-body">
+        <!-- Add Test Case Button -->
+        <button class="btn btn-success btn-lg mb-4" data-bs-toggle="modal" data-bs-target="#addTestCaseModal">
+            + Add Test Case
+        </button>
+
+        <!-- Test Case List -->
+        <h3 class="mb-3">Test Cases</h3>
+        <div class="list-group">
+            {% for case in suite.test_cases %}
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-center">
+                    <!-- 클릭 가능 영역 -->
+                    <a href="/case/{{ case.id }}" class="text-decoration-none flex-grow-1">
+                        <div>
+                            <h5 class="mb-1">{{ case.case_id }}: {{ case.title }}</h5>
+                            <p class="mb-2">{{ case.description }}</p>
+
+                            <!-- 실행 상태 표시 -->
+                            <div>
+                        <span class="badge
+                            {% if case.executions|length > 0 %}
+                                {% if case.executions[-1].result == 'PASS' %} bg-success
+                                {% elif case.executions[-1].result == 'FAIL' %} bg-danger
+                                {% else %} bg-warning text-dark
+                                {% endif %}
+                            {% else %}
+                                bg-secondary text-white
+                            {% endif %}
+                        ">
+                            {% if case.executions|length > 0 %}
+                                {{ case.executions[-1].result }}
+                            {% else %}
+                                NOT EXECUTED
+                            {% endif %}
+                        </span>
+                            </div>
+                        </div>
+                    </a>
+
+                    <!-- 드롭다운은 클릭 가능 영역 외부 -->
+                    <form method="POST" action="/update_case_result/{{ case.id }}" class="d-inline">
+                        <select name="result" class="form-select form-select-sm w-auto" onchange="this.form.submit()">
+                            <option value="" disabled selected>Update Status</option>
+                            <option value="PASS">PASS</option>
+                            <option value="FAIL">FAIL</option>
+                            <option value="NOT_RUN">NOT_RUN</option>
+                        </select>
+                    </form>
+                </div>
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                No test cases found. Add one!
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Add Test Case Modal -->
+<div class="modal fade" id="addTestCaseModal" tabindex="-1" aria-labelledby="addTestCaseModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form method="POST" action="/add_case/{{ suite.id }}">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addTestCaseModalLabel">Add New Test Case</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <!-- Case Title -->
+                    <div class="mb-3">
+                        <label for="title" class="form-label">Case Title</label>
+                        <input type="text" name="title" id="title" class="form-control" required>
+                    </div>
+                    <!-- Precondition -->
+                    <div class="mb-3">
+                        <label for="precondition" class="form-label">Precondition</label>
+                        <textarea name="precondition" id="precondition" class="form-control"></textarea>
+                    </div>
+                    <!-- Test Steps -->
+                    <div class="mb-3">
+                        <label for="steps" class="form-label">Steps</label>
+                        <textarea name="steps" id="steps" class="form-control"></textarea>
+                    </div>
+                    <!-- Expected Result -->
+                    <div class="mb-3">
+                        <label for="expected_result" class="form-label">Expected Result</label>
+                        <textarea name="expected_result" id="expected_result" class="form-control"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-success">Add Test Case</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
