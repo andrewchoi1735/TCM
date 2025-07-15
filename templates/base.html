@@ -55,6 +55,7 @@
             <a class="navbar-brand" href="/">Test</a>
             <div class="navbar-nav ms-auto">
                 <a class="nav-link" href="/dashboard">Dashboard</a>
+                <a class="nav-link" href="/upload_xml">Import XML</a>
                 <a class="nav-link" href="/logout">Logout</a>
             </div>
         </div>
@@ -71,6 +72,11 @@
                     <li class="nav-item">
                         <a class="nav-link text-white" href="{{ url_for('suite_list') }}">
                             📁 Projects
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link text-white" href="{{ url_for('upload_xml') }}">
+                            📤 Import XML
                         </a>
                     </li>
                 </ul>
