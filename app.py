@@ -5,14 +5,12 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import datetime
 from flask_migrate import Migrate
 from sqlalchemy.sql import func
-from flask_moment import Moment
 import xml.etree.ElementTree as ET
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_management.db'
 app.config['SECRET_KEY'] = 'asdf1234!@#$asdf1234!@#$'  # 실제 사용 시 랜덤값으로 변경
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-moment = Moment(app)
 # 로그인 관리 설정
 login_manager = LoginManager()
 login_manager.init_app(app)
