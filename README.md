@@ -26,11 +26,14 @@ Set these variables when running the app if you need to customize the secret key
 
 ## Database initialization
 
-The bundled `app.py` automatically creates the database if it does not exist:
 
-```bash
-python app.py  # creates test_management.db under ./instance
-```
+The app automatically creates the database when it starts. Run it with
+`python app.py` or `flask run` and a new `test_management.db` will appear under
+`./instance` if it is missing.
+
+If you previously ran the app before a model was added (for example the
+`Project` table), remove the old `instance/test_management.db` so the new
+schema can be created or use migrations to upgrade the database.
 
 If you prefer using migrations, initialize them before running:
 

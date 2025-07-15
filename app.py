@@ -19,6 +19,10 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
 
+# Automatically create tables when the application starts
+with app.app_context():
+    db.create_all()
+
 
 # DB 모델 정의
 class User(UserMixin, db.Model):
