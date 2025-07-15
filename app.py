@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import os
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 import datetime
 from flask_migrate import Migrate
 from sqlalchemy.sql import func
@@ -10,6 +11,7 @@ import xml.etree.ElementTree as ET
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:///test_management.db')
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'change-me')  # 실제 사용 시 랜덤값으로 변경
+MAX_UPLOAD_SIZE = 2 * 1024 * 1024  # 2MB limit for uploaded files
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 # 로그인 관리 설정
@@ -349,15 +351,32 @@ def update_case_details(case_id):  # 또 다른 update_case 함수의 이름 변
 def upload_xml():
     if request.method == 'POST':
         file = request.files.get('xml_file')
-        if not file:
+        if not file or file.filename == '':
             flash('No file selected.', 'danger')
             return redirect(request.url)
 
+        # Reject overly large files
+        file.seek(0, os.SEEK_END)
+        if file.tell() > MAX_UPLOAD_SIZE:
+            flash('File is too large.', 'danger')
+            return redirect(request.url)
+        file.seek(0)
+
+        # Save securely for processing
+        filename = secure_filename(file.filename)
+        save_path = os.path.join('instance', filename)
+        file.save(save_path)
+
         try:
-            tree = ET.parse(file)
+            tree = ET.parse(save_path)
             root = tree.getroot()
+        except ET.ParseError as e:
+            flash(f'Malformed XML: {e}', 'danger')
+            os.remove(save_path)
+            return redirect(request.url)
         except Exception as e:
             flash(f'Failed to parse XML: {e}', 'danger')
+            os.remove(save_path)
             return redirect(request.url)
 
         suites = []
@@ -369,6 +388,7 @@ def upload_xml():
             flash('Invalid XML format.', 'danger')
             return redirect(request.url)
 
+        duplicate_found = False
         for s in suites:
             suite_name = s.get('name', 'Imported Suite')
             abbreviation = s.get('abbreviation', suite_name[:3].upper())
@@ -383,6 +403,11 @@ def upload_xml():
                 precondition = c.findtext('precondition', default='')
                 steps = c.findtext('steps', default='')
                 expected = c.findtext('expected_result') or c.findtext('expected') or ''
+                # Skip duplicates based on title within the suite
+                if TestCase.query.filter_by(title=title, suite_id=suite.id, user_id=current_user.id).first():
+                    duplicate_found = True
+                    continue
+
                 case_id = generate_case_id(suite)
                 new_case = TestCase(
                     case_id=case_id,
@@ -396,6 +421,9 @@ def upload_xml():
                 db.session.add(new_case)
 
         db.session.commit()
+        os.remove(save_path)
+        if duplicate_found:
+            flash('Some duplicate cases were skipped.', 'warning')
         flash('XML test cases imported successfully.', 'success')
         return redirect(url_for('suite_list'))
 
