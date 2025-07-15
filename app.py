@@ -1,18 +1,19 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+import os
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.utils import secure_filename
 import datetime
 from flask_migrate import Migrate
 from sqlalchemy.sql import func
-from flask_moment import Moment
 import xml.etree.ElementTree as ET
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_management.db'
-app.config['SECRET_KEY'] = 'asdf1234!@#$asdf1234!@#$'  # 실제 사용 시 랜덤값으로 변경
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:///test_management.db')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'change-me')  # 실제 사용 시 랜덤값으로 변경
+MAX_UPLOAD_SIZE = 2 * 1024 * 1024  # 2MB limit for uploaded files
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
-moment = Moment(app)
 # 로그인 관리 설정
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -96,14 +97,6 @@ def dashboard():
                            fail_count=fail_count,
                            notrun_count=notrun_count)
 
-
-def dashboard_view(request):
-    suites = Suite.objects.order_by('-created_at')[:10]  # 최근 생성된 상위 10개
-    cases = TestCase.objects.order_by('-created_at')[:10]  # 최근 생성된 상위 10개
-    return render(request, 'dashboard.html', {
-        'suites':suites,
-        'cases':cases,
-    })
 
 # [기존 라우트들에 @login_required 추가 및 user_id 필터링]
 # [... 기존 코드 유지 (모든 데이터 조회 시 current_user.id 필터 적용 필요) ...]
@@ -356,59 +349,85 @@ def update_case_details(case_id):  # 또 다른 update_case 함수의 이름 변
 @app.route('/upload_xml', methods=['GET', 'POST'])
 @login_required
 def upload_xml():
-        if request.method == 'POST':
-                file = request.files.get('xml_file')
-                if not file:
-                        flash('No file selected.', 'danger')
-                        return redirect(request.url)
+    if request.method == 'POST':
+        file = request.files.get('xml_file')
+        if not file or file.filename == '':
+            flash('No file selected.', 'danger')
+            return redirect(request.url)
 
-                try:
-                        tree = ET.parse(file)
-                        root = tree.getroot()
-                except Exception as e:
-                        flash(f'Failed to parse XML: {e}', 'danger')
-                        return redirect(request.url)
+        # Reject overly large files
+        file.seek(0, os.SEEK_END)
+        if file.tell() > MAX_UPLOAD_SIZE:
+            flash('File is too large.', 'danger')
+            return redirect(request.url)
+        file.seek(0)
 
-                suites = []
-                if root.tag == 'testsuites':
-                        suites = root.findall('testsuite')
-                elif root.tag == 'testsuite':
-                        suites = [root]
-                else:
-                        flash('Invalid XML format.', 'danger')
-                        return redirect(request.url)
+        # Save securely for processing
+        filename = secure_filename(file.filename)
+        save_path = os.path.join('instance', filename)
+        file.save(save_path)
 
-                for s in suites:
-                        suite_name = s.get('name', 'Imported Suite')
-                        abbreviation = s.get('abbreviation', suite_name[:3].upper())
-                        suite = TestSuite.query.filter_by(name=suite_name, user_id=current_user.id).first()
-                        if not suite:
-                                suite = TestSuite(name=suite_name, abbreviation=abbreviation, user_id=current_user.id)
-                                db.session.add(suite)
-                                db.session.flush()
+        try:
+            tree = ET.parse(save_path)
+            root = tree.getroot()
+        except ET.ParseError as e:
+            flash(f'Malformed XML: {e}', 'danger')
+            os.remove(save_path)
+            return redirect(request.url)
+        except Exception as e:
+            flash(f'Failed to parse XML: {e}', 'danger')
+            os.remove(save_path)
+            return redirect(request.url)
 
-                        for c in s.findall('testcase'):
-                                title = c.findtext('title', default='Untitled Case')
-                                precondition = c.findtext('precondition', default='')
-                                steps = c.findtext('steps', default='')
-                                expected = c.findtext('expected_result') or c.findtext('expected') or ''
-                                case_id = generate_case_id(suite)
-                                new_case = TestCase(
-                                        case_id=case_id,
-                                        title=title,
-                                        precondition=precondition,
-                                        steps=steps,
-                                        expected_result=expected,
-                                        suite_id=suite.id,
-                                        user_id=current_user.id
-                                )
-                                db.session.add(new_case)
+        suites = []
+        if root.tag == 'testsuites':
+            suites = root.findall('testsuite')
+        elif root.tag == 'testsuite':
+            suites = [root]
+        else:
+            flash('Invalid XML format.', 'danger')
+            return redirect(request.url)
 
-                db.session.commit()
-                flash('XML test cases imported successfully.', 'success')
-                return redirect(url_for('suite_list'))
+        duplicate_found = False
+        for s in suites:
+            suite_name = s.get('name', 'Imported Suite')
+            abbreviation = s.get('abbreviation', suite_name[:3].upper())
+            suite = TestSuite.query.filter_by(name=suite_name, user_id=current_user.id).first()
+            if not suite:
+                suite = TestSuite(name=suite_name, abbreviation=abbreviation, user_id=current_user.id)
+                db.session.add(suite)
+                db.session.flush()
 
-        return render_template('upload_xml.html')
+            for c in s.findall('testcase'):
+                title = c.findtext('title', default='Untitled Case')
+                precondition = c.findtext('precondition', default='')
+                steps = c.findtext('steps', default='')
+                expected = c.findtext('expected_result') or c.findtext('expected') or ''
+                # Skip duplicates based on title within the suite
+                if TestCase.query.filter_by(title=title, suite_id=suite.id, user_id=current_user.id).first():
+                    duplicate_found = True
+                    continue
+
+                case_id = generate_case_id(suite)
+                new_case = TestCase(
+                    case_id=case_id,
+                    title=title,
+                    precondition=precondition,
+                    steps=steps,
+                    expected_result=expected,
+                    suite_id=suite.id,
+                    user_id=current_user.id
+                )
+                db.session.add(new_case)
+
+        db.session.commit()
+        os.remove(save_path)
+        if duplicate_found:
+            flash('Some duplicate cases were skipped.', 'warning')
+        flash('XML test cases imported successfully.', 'success')
+        return redirect(url_for('suite_list'))
+
+    return render_template('upload_xml.html')
 
 
 if __name__ == '__main__':
