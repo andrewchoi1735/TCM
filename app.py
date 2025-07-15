@@ -26,6 +26,15 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(50), unique=True)
     password = db.Column(db.String(100))
     suites = db.relationship('TestSuite', backref='user', lazy=True)
+    projects = db.relationship('Project', backref='user', lazy=True)
+
+
+class Project(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=func.now())
+    suites = db.relationship('TestSuite', backref='project', lazy=True)
 
 
 class TestCase(db.Model):
@@ -46,6 +55,7 @@ class TestSuite(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    project_id = db.Column(db.Integer, db.ForeignKey('project.id'), nullable=False)
     abbreviation = db.Column(db.String(10), nullable=False)  # 약칭 필드
     created_at = db.Column(db.DateTime, default=func.now())
     # 기존 test_cases 유지
@@ -77,13 +87,15 @@ def index():
 @login_required
 def dashboard():
     # 최신순으로 가져오는 쿼리 추가
-    suites = TestSuite.query.filter_by(user_id=current_user.id).order_by(TestSuite.created_at.desc()).limit(10).all()
-    cases = TestCase.query.join(TestSuite).filter(TestSuite.user_id == current_user.id).order_by(
+    suites = TestSuite.query.join(Project).filter(Project.user_id == current_user.id).order_by(TestSuite.created_at.desc()).limit(10).all()
+    cases = TestCase.query.join(TestSuite).join(Project).filter(
+        Project.user_id == current_user.id).order_by(
         TestCase.created_at.desc()).limit(10).all()
 
     # 통계 데이터
     total_cases = len(cases)
-    executions = TestExecution.query.join(TestCase).join(TestSuite).filter(TestSuite.user_id == current_user.id).all()
+    executions = TestExecution.query.join(TestCase).join(TestSuite).join(Project).filter(
+        Project.user_id == current_user.id).all()
 
     pass_count = sum(1 for e in executions if e.result == 'PASS')
     fail_count = sum(1 for e in executions if e.result == 'FAIL')
@@ -104,6 +116,8 @@ def dashboard():
 # 로그인/회원가입 기능
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('dashboard'))
     if request.method == 'POST':
         username = request.form['username']
         password = request.form['password']
@@ -146,44 +160,49 @@ def storage_info():
 
 
 
-@app.route('/suites', methods=['GET'])
-def suite_list():
-    suites = TestSuite.query.all()  # 모든 Suite 가져오기
-    return render_template('suite_list.html', suites=suites)
+@app.route('/projects', methods=['GET'])
+@login_required
+def project_list():
+    projects = Project.query.filter_by(user_id=current_user.id).all()
+    return render_template('project_list.html', projects=projects)
 
 
-@app.route('/create_suite', methods=['POST'])
-def create_suite():
-    if not current_user.is_authenticated:
-        return redirect('/login')  # 인증되지 않은 경우 로그인 페이지로 이동
+@app.route('/create_suite/<int:project_id>', methods=['POST'])
+@login_required
+def create_suite(project_id):
+    project = Project.query.filter_by(id=project_id, user_id=current_user.id).first_or_404()
 
-    # Form 데이터 가져오기
     name = request.form['name']
     abbreviation = request.form['abbreviation']
 
-    # 새로운 Suite 생성 (user_id 포함)
     new_suite = TestSuite(
         name=name,
         abbreviation=abbreviation,
-        user_id=current_user.id  # 로그인된 사용자의 ID를 추가
+        user_id=current_user.id,
+        project_id=project.id
     )
 
-    # DB에 추가
     db.session.add(new_suite)
     db.session.commit()
 
-    return redirect('/suites')  # Suite 생성 후 Suite 목록 화면으로 이동
+    return redirect(url_for('view_project', project_id=project_id))
+
+
+@app.route('/project/<int:project_id>')
+@login_required
+def view_project(project_id):
+    project = Project.query.filter_by(id=project_id, user_id=current_user.id).first_or_404()
+    return render_template('suite_list.html', project=project)
 
 
 
 @app.route('/suite/<int:suite_id>')
 @login_required
 def view_suite(suite_id):
-    # 현재 사용자의 스위트만 조회하도록 수정 🔒
-    suite = TestSuite.query.filter_by(
-        id=suite_id,
-        user_id=current_user.id
-    ).first_or_404()  # 404 에러 자동 처리
+    suite = TestSuite.query.join(Project).filter(
+        TestSuite.id == suite_id,
+        Project.user_id == current_user.id
+    ).first_or_404()
     return render_template('suite.html', suite=suite)
 
 
@@ -191,9 +210,9 @@ def view_suite(suite_id):
 @app.route('/case/<int:case_id>', methods=['GET'])
 @login_required
 def view_case(case_id):
-    case = TestCase.query.join(TestSuite).filter(
+    case = TestCase.query.join(TestSuite).join(Project).filter(
         TestCase.id == case_id,
-        TestSuite.user_id == current_user.id  # 🔑 TestSuite를 통해 사용자 필터링
+        Project.user_id == current_user.id
     ).first_or_404()
     return render_template('case.html', case=case)
 
@@ -209,8 +228,10 @@ def generate_case_id(suite):
 @app.route('/add_case/<int:suite_id>', methods=['POST'])
 @login_required
 def add_case(suite_id):
-    # 현재 사용자가 소유한 Suite인지 확인
-    suite = TestSuite.query.filter_by(id=suite_id, user_id=current_user.id).first_or_404()
+    suite = TestSuite.query.join(Project).filter(
+        TestSuite.id == suite_id,
+        Project.user_id == current_user.id
+    ).first_or_404()
 
     # POST로 전달받은 데이터
     title = request.form.get('title', '').strip()
@@ -264,9 +285,9 @@ def update_case_result(case_id):  # 기존 update_case에서 이름 변경
         flash("Invalid result selected.", "danger")
         return redirect(request.referrer)
 
-    case = TestCase.query.join(TestSuite).filter(
+    case = TestCase.query.join(TestSuite).join(Project).filter(
         TestCase.id == case_id,
-        TestSuite.user_id == current_user.id
+        Project.user_id == current_user.id
     ).first_or_404()
 
     # 새로운 실행 결과 추가
@@ -284,10 +305,10 @@ def update_case_result(case_id):  # 기존 update_case에서 이름 변경
 @login_required  # 로그인 필수
 def execute_case(case_id):
     # 테스트 케이스가 현재 사용자와 연결된 케이스인지 확인
-    case = TestCase.query.join(TestSuite).filter(
-        TestCase.id == case_id,  # 케이스 ID 매칭
-        TestSuite.user_id == current_user.id  # 현재 사용자 권한 확인
-    ).first_or_404()  # 없으면 404 에러 처리
+    case = TestCase.query.join(TestSuite).join(Project).filter(
+        TestCase.id == case_id,
+        Project.user_id == current_user.id
+    ).first_or_404()
 
     # 결과 폼 데이터 가져오기
     result = request.form.get('result')
@@ -311,9 +332,9 @@ def execute_case(case_id):
 @login_required
 def update_case_details(case_id):  # 또 다른 update_case 함수의 이름 변경
     # 현재 사용자가 소유한 Test Case인지 확인
-    case = TestCase.query.join(TestSuite).filter(
+    case = TestCase.query.join(TestSuite).join(Project).filter(
         TestCase.id == case_id,
-        TestSuite.user_id == current_user.id  # 현재 사용자 검사
+        Project.user_id == current_user.id
     ).first_or_404()
 
     # 수정 데이터 가져오기
@@ -425,7 +446,7 @@ def upload_xml():
         if duplicate_found:
             flash('Some duplicate cases were skipped.', 'warning')
         flash('XML test cases imported successfully.', 'success')
-        return redirect(url_for('suite_list'))
+        return redirect(url_for('project_list'))
 
     return render_template('upload_xml.html')
 
