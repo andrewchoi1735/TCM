@@ -4,6 +4,7 @@
 <div class="card">
     <div class="card-header bg-primary text-white">
         <h2>{{ suite.name }}</h2>
+        <p class="mb-0">Created by {{ suite.user.username }} on {{ suite.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
         <p class="mb-0">Total Test Cases: <span class="fw-bold">{{ suite.test_cases|length }}</span></p>
     </div>
     <div class="card-body">
@@ -22,7 +23,7 @@
                     <a href="/case/{{ case.id }}" class="text-decoration-none flex-grow-1">
                         <div>
                             <h5 class="mb-1">{{ case.case_id }}: {{ case.title }}</h5>
-                            <p class="mb-2">{{ case.description }}</p>
+                            <p class="mb-2">Created by {{ case.user.username }} on {{ case.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
 
                             <!-- 실행 상태 표시 -->
                             <div>

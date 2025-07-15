@@ -70,7 +70,7 @@
             <div class="position-sticky pt-3">
                 <ul class="nav flex-column">
                     <li class="nav-item">
-                        <a class="nav-link text-white" href="{{ url_for('suite_list') }}">
+                        <a class="nav-link text-white" href="{{ url_for('project_list') }}">
                             📁 Projects
                         </a>
                     </li>
@@ -85,10 +85,10 @@
                     🛠️ MY TEST Projects
                 </h6>
                 <ul class="nav flex-column">
-                    {% for suite in current_user.test_suites %}
+                    {% for project in current_user.projects %}
                     <li class="nav-item">
-                        <a class="nav-link text-white" href="{{ url_for('view_suite', suite_id=suite.id) }}">
-                            {{ suite.name }}
+                        <a class="nav-link text-white" href="{{ url_for('view_project', project_id=project.id) }}">
+                            {{ project.name }}
                         </a>
                     </li>
                     {% endfor %}
