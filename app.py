@@ -356,59 +356,59 @@ def update_case_details(case_id):  # 또 다른 update_case 함수의 이름 변
 @app.route('/upload_xml', methods=['GET', 'POST'])
 @login_required
 def upload_xml():
-        if request.method == 'POST':
-                file = request.files.get('xml_file')
-                if not file:
-                        flash('No file selected.', 'danger')
-                        return redirect(request.url)
+    if request.method == 'POST':
+        file = request.files.get('xml_file')
+        if not file:
+            flash('No file selected.', 'danger')
+            return redirect(request.url)
 
-                try:
-                        tree = ET.parse(file)
-                        root = tree.getroot()
-                except Exception as e:
-                        flash(f'Failed to parse XML: {e}', 'danger')
-                        return redirect(request.url)
+        try:
+            tree = ET.parse(file)
+            root = tree.getroot()
+        except Exception as e:
+            flash(f'Failed to parse XML: {e}', 'danger')
+            return redirect(request.url)
 
-                suites = []
-                if root.tag == 'testsuites':
-                        suites = root.findall('testsuite')
-                elif root.tag == 'testsuite':
-                        suites = [root]
-                else:
-                        flash('Invalid XML format.', 'danger')
-                        return redirect(request.url)
+        suites = []
+        if root.tag == 'testsuites':
+            suites = root.findall('testsuite')
+        elif root.tag == 'testsuite':
+            suites = [root]
+        else:
+            flash('Invalid XML format.', 'danger')
+            return redirect(request.url)
 
-                for s in suites:
-                        suite_name = s.get('name', 'Imported Suite')
-                        abbreviation = s.get('abbreviation', suite_name[:3].upper())
-                        suite = TestSuite.query.filter_by(name=suite_name, user_id=current_user.id).first()
-                        if not suite:
-                                suite = TestSuite(name=suite_name, abbreviation=abbreviation, user_id=current_user.id)
-                                db.session.add(suite)
-                                db.session.flush()
+        for s in suites:
+            suite_name = s.get('name', 'Imported Suite')
+            abbreviation = s.get('abbreviation', suite_name[:3].upper())
+            suite = TestSuite.query.filter_by(name=suite_name, user_id=current_user.id).first()
+            if not suite:
+                suite = TestSuite(name=suite_name, abbreviation=abbreviation, user_id=current_user.id)
+                db.session.add(suite)
+                db.session.flush()
 
-                        for c in s.findall('testcase'):
-                                title = c.findtext('title', default='Untitled Case')
-                                precondition = c.findtext('precondition', default='')
-                                steps = c.findtext('steps', default='')
-                                expected = c.findtext('expected_result') or c.findtext('expected') or ''
-                                case_id = generate_case_id(suite)
-                                new_case = TestCase(
-                                        case_id=case_id,
-                                        title=title,
-                                        precondition=precondition,
-                                        steps=steps,
-                                        expected_result=expected,
-                                        suite_id=suite.id,
-                                        user_id=current_user.id
-                                )
-                                db.session.add(new_case)
+            for c in s.findall('testcase'):
+                title = c.findtext('title', default='Untitled Case')
+                precondition = c.findtext('precondition', default='')
+                steps = c.findtext('steps', default='')
+                expected = c.findtext('expected_result') or c.findtext('expected') or ''
+                case_id = generate_case_id(suite)
+                new_case = TestCase(
+                    case_id=case_id,
+                    title=title,
+                    precondition=precondition,
+                    steps=steps,
+                    expected_result=expected,
+                    suite_id=suite.id,
+                    user_id=current_user.id
+                )
+                db.session.add(new_case)
 
-                db.session.commit()
-                flash('XML test cases imported successfully.', 'success')
-                return redirect(url_for('suite_list'))
+        db.session.commit()
+        flash('XML test cases imported successfully.', 'success')
+        return redirect(url_for('suite_list'))
 
-        return render_template('upload_xml.html')
+    return render_template('upload_xml.html')
 
 
 if __name__ == '__main__':
