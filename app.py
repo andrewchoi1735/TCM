@@ -97,14 +97,6 @@ def dashboard():
                            notrun_count=notrun_count)
 
 
-def dashboard_view(request):
-    suites = Suite.objects.order_by('-created_at')[:10]  # 최근 생성된 상위 10개
-    cases = TestCase.objects.order_by('-created_at')[:10]  # 최근 생성된 상위 10개
-    return render(request, 'dashboard.html', {
-        'suites':suites,
-        'cases':cases,
-    })
-
 # [기존 라우트들에 @login_required 추가 및 user_id 필터링]
 # [... 기존 코드 유지 (모든 데이터 조회 시 current_user.id 필터 적용 필요) ...]
 
