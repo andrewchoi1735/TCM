@@ -1,0 +1,21 @@
+# Ignore Python cache and compiled files
+__pycache__/
+*.py[cod]
+
+# Ignore JetBrains IDE configs
+.idea/
+
+# Ignore VS Code settings
+.vscode/
+
+# Ignore environment files and virtual environments
+.env
+.env.*
+venv/
+ENV/
+
+# Ignore macOS files
+.DS_Store
+
+# Ignore database files
+*.db
