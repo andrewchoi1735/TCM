@@ -20,3 +20,9 @@ python app.py
 ```
 
 The database file will be created automatically if it does not exist.
+
+## File Uploads
+
+XML uploads are limited to 2MB. Uploaded files are saved using `secure_filename`
+and deleted after processing. Malformed XML or duplicate test cases are skipped
+with warnings.
