@@ -1,14 +1,15 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+import os
 from werkzeug.security import generate_password_hash, check_password_hash
 import datetime
 from flask_migrate import Migrate
 from sqlalchemy.sql import func
 import xml.etree.ElementTree as ET
 app = Flask(__name__)
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///test_management.db'
-app.config['SECRET_KEY'] = 'asdf1234!@#$asdf1234!@#$'  # 실제 사용 시 랜덤값으로 변경
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('SQLALCHEMY_DATABASE_URI', 'sqlite:///test_management.db')
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'change-me')  # 실제 사용 시 랜덤값으로 변경
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 # 로그인 관리 설정
